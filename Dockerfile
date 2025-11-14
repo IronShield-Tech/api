@@ -1,5 +1,14 @@
 # Stage 1: Build with dependency caching
 FROM rust:bullseye AS builder
+
+RUN apt-get update && apt-get install -y \
+    clang \
+    llvm \
+    pkg-config \
+    nettle-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy the dependency manifest. Cargo will generate a new lock file.

@@ -1,6 +1,7 @@
 mod constant;
 mod handler;
 mod routing;
+mod doc;
 
 use routing::app;
 

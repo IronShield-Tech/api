@@ -31,11 +31,11 @@ enum HealthResponses {
 /// Health check endpoint.
 /// 
 /// # Returns:
-/// * `Json<Value>`: A JSON object containing the 
-///                  - health status, 
-///                  - service name, 
-///                  - version,
-///                  - current timestamp.
+/// * `Json<Value>`: A JSON object containing the
+///                  health status,
+///                  service name,
+///                  version,
+///                  current timestamp.
 #[utoipa::path(
     get,
     path = "/health",
