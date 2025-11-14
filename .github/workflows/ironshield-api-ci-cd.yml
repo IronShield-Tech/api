@@ -14,7 +14,7 @@ env:
 permissions:
   contents: write
 
-# ensure that the workflow is only triggered once per PR, subsequent pushes to the PR will cancel
+# Ensure that the workflow is only triggered once per PR, subsequent pushes to the PR will cancel
 # and restart the workflow. See https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -29,6 +29,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -38,32 +39,36 @@ jobs:
             pkg-config \
             nettle-dev \
             libssl-dev
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-      
-      # Strip path dependencies for CI (use only version dependencies)
+
+      # Strip path dependencies for CI (use only version dependencies).
       - name: Prepare Cargo.toml for CI
         shell: bash
         run: |
-          # Remove path dependencies, keeping only version dependencies
+          # Remove path dependencies, keeping only version dependencies.
           sed -i 's/, path = "[^"]*"//g' Cargo.toml
           echo "Modified Cargo.toml for CI:"
           cat Cargo.toml
-          
+
       - name: Run clippy action
         uses: clechasseur/rs-clippy-check@v5
+
   doc:
-    # run docs generation on nightly rather than stable. This enables features like
+    # Run docs generation on nightly rather than stable. This enables features like
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
     name: doc
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -73,24 +78,27 @@ jobs:
             pkg-config \
             nettle-dev \
             libssl-dev
+
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
+
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-        
-      # Strip path dependencies for CI (use only version dependencies)
+
+      # Strip path dependencies for CI (use only version dependencies).
       - name: Prepare Cargo.toml for CI
         shell: bash
         run: |
-          # Remove path dependencies, keeping only version dependencies
+          # Remove path dependencies, keeping only version dependencies.
           sed -i 's/, path = "[^"]*"//g' Cargo.toml
           echo "Modified Cargo.toml for CI:"
           cat Cargo.toml
-          
+
       - name: Run cargo doc
         run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: --cfg docsrs
+
   test:
     runs-on: ${{ matrix.os }}
     name: test ${{ matrix.os }}
@@ -100,7 +108,10 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v5
-      - name: Install system dependencies
+
+      # Install system dependencies based on OS.
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -109,22 +120,42 @@ jobs:
             pkg-config \
             nettle-dev \
             libssl-dev
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install \
+            nettle \
+            pkg-config \
+            openssl@3
+
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Install vcpkg for Windows dependencies.
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg.exe install nettle:x64-windows openssl:x64-windows
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      # Strip path dependencies for CI (use only version dependencies)
+      # Strip path dependencies for CI (use only version dependencies).
       - name: Prepare Cargo.toml for CI
         shell: bash
         run: |
-          # Remove path dependencies, keeping only version dependencies
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS (BSD sed) requires empty extension parameter
+          # Remove path dependencies, keeping only version dependencies.
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            # macOS (BSD sed) requires empty extension parameter.
             sed -i '' 's/, path = "[^"]*"//g' Cargo.toml
           else
-            # Linux (GNU sed) uses different syntax
+            # Linux and Windows (GNU sed) use different syntax.
             sed -i 's/, path = "[^"]*"//g' Cargo.toml
           fi
           echo "Modified Cargo.toml for CI:"
@@ -134,13 +165,13 @@ jobs:
         run: cargo test --all-features --all-targets
 
   version-bump:
-    # Only bump version on changes to main branch
+    # Only bump version on changes to main branch.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: [clippy, doc, test]  # Wait for CI to pass before bumping
+    needs: [clippy, doc, test]  # Wait for CI to pass before bumping.
     outputs:
       new-version: ${{ steps.bump.outputs.new-version }}
-    
+
     steps:
       # Checkout the repository.
       - name: Checkout
@@ -148,7 +179,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Cache cargo tools separately since they don't change often
+      # Cache cargo tools separately since they don't change often.
       - name: Cache Cargo Tools
         uses: actions/cache@v4
         with:
@@ -200,24 +231,25 @@ jobs:
           git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
           git push origin main
 
-      # Create and push a tag 
+      # Create and push a tag.
       - name: Create Git Tag
         run: |
           git tag "v${{ steps.bump.outputs.new-version }}"
           git push origin "v${{ steps.bump.outputs.new-version }}"
 
   publish-crate:
-    # Publish to crates.io after version bump
+    # Publish to crates.io after version bump.
     runs-on: ubuntu-latest
     needs: [version-bump]
-    
+
     steps:
-      # Checkout the repository at the new version
+      # Checkout the repository at the new version.
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: main
 
+      # Install system dependencies.
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -232,20 +264,20 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # Cache Rust dependencies and compilation artifacts
+      # Cache Rust dependencies and compilation artifacts.
       - name: Cache Rust Dependencies
         uses: Swatinem/rust-cache@v2
 
-      # Strip path dependencies for CI (use only version dependencies)
+      # Strip path dependencies for CI (use only version dependencies).
       - name: Prepare Cargo.toml for CI
         shell: bash
         run: |
-          # Remove path dependencies, keeping only version dependencies
+          # Remove path dependencies, keeping only version dependencies.
           sed -i 's/, path = "[^"]*"//g' Cargo.toml
           echo "Modified Cargo.toml for CI:"
           cat Cargo.toml
 
-      # Build and verify the package before publishing
+      # Build and verify the package before publishing.
       - name: Build Package
         run: |
           echo "Building package v${{ needs.version-bump.outputs.new-version }}..."
@@ -259,26 +291,26 @@ jobs:
         run: cargo publish --allow-dirty
 
   deploy-fly:
-    # Deploy to Fly.io after version bump
+    # Deploy to Fly.io after version bump.
     runs-on: ubuntu-latest
     needs: [version-bump]
-    
+
     steps:
-      # Checkout the repository at the new version
+      # Checkout the repository at the new version.
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: main
 
-      # Setup Fly.io CLI and deploy
+      # Setup Fly.io CLI and deploy.
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      # Strip path dependencies for CI (use only version dependencies)
+      # Strip path dependencies for CI (use only version dependencies).
       - name: Prepare Cargo.toml for CI
         shell: bash
         run: |
-          # Remove path dependencies, keeping only version dependencies
+          # Remove path dependencies, keeping only version dependencies.
           sed -i 's/, path = "[^"]*"//g' Cargo.toml
           echo "Modified Cargo.toml for CI:"
           cat Cargo.toml
