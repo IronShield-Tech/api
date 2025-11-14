@@ -1,16 +1,18 @@
 //! # Health check handler module.
 
-use axum::Json;
+use axum::{
+    Json,
+    http::StatusCode
+};
 use serde_json::{
     json, 
     Value
 };
-
-use crate::constant;
 use ironshield::handler::{
     result::ResultHandler,
-    error::STATUS_OK
 };
+
+use crate::constant;
 
 // Response types for OpenAPI documentation
 #[derive(utoipa::IntoResponses)]
@@ -19,9 +21,9 @@ enum HealthResponses {
     /// Health check successful
     #[response(status = 200)]
     Success {
-        status: u16,
-        service: String,
-        version: String,
+        status:    u16,
+        service:   String,
+        version:   String,
         timestamp: i64,
     },
 }
@@ -42,7 +44,7 @@ enum HealthResponses {
 )]
 pub async fn health_check() -> ResultHandler<Json<Value>> {
     Ok(Json(json!({
-        "status":    STATUS_OK,
+        "status":    StatusCode::OK.as_u16(),
         "service":   constant::SERVICE_NAME,
         "version":   constant::VERSION,
         "timestamp": chrono::Utc::now().timestamp_millis()

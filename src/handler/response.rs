@@ -5,8 +5,8 @@ use axum::extract::Json;
 #[allow(unused_imports)]
 use ironshield_core::verify_ironshield_solution;
 use ironshield_types::{
-    load_private_key_from_env,
-    load_public_key_from_env,
+    load_private_key,
+    load_public_key,
     IronShieldChallengeResponse,
     IronShieldToken
 };
@@ -117,9 +117,9 @@ async fn generate_authentication_token(
 
     // Signatures should cover challenge_signature + valid_for
     // to prevent tampering.
-    let signing_key: ironshield_core::SigningKey = load_private_key_from_env()
+    let signing_key: ironshield_core::SigningKey = load_private_key(None)
         .map_err(|e: ironshield_types::CryptoError| ErrorHandler::ProcessingError(format!("{}: {}", SIG_KEY_FAIL.message, e)))?;
-    let public_key: [u8; 32] = load_public_key_from_env()
+    let public_key: [u8; 32] = load_public_key(None)
         .map_err(|e: ironshield_types::CryptoError| ErrorHandler::ProcessingError(format!("{}: {}", PUB_KEY_FAIL.message, e)))?
         .to_bytes();
 

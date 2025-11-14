@@ -7,8 +7,8 @@ use serde_json::{
 };
 
 use ironshield_types::{
-    load_private_key_from_env,
-    load_public_key_from_env,
+    load_private_key,
+    load_public_key,
     IronShieldChallenge,
     IronShieldRequest
 };
@@ -37,7 +37,7 @@ enum RequestResponses {
     Success {
         status: u16,
         message: String,
-        challenge: ironshield_types::IronShieldChallenge,
+        challenge: IronShieldChallenge,
     },
     /// Invalid request - endpoint must be HTTPS URL
     #[response(status = 422, description = INVALID_ENDPOINT_MSG)]
@@ -97,11 +97,11 @@ async fn generate_challenge_for_request(
     request: IronShieldRequest
 ) -> ResultHandler<IronShieldChallenge> {
     // Load the signing key from the env var.
-    let signing_key: ironshield_core::SigningKey = load_private_key_from_env()
+    let signing_key: ironshield_core::SigningKey = load_private_key(None)
         .map_err(|e: ironshield_types::CryptoError| ErrorHandler::ProcessingError(format!("Failed to load signing key: {}", e)))?;
     
     // Load the public key from the env var.
-    let public_key = load_public_key_from_env()
+    let public_key = load_public_key(None)
         .map_err(|e: ironshield_types::CryptoError| ErrorHandler::ProcessingError(format!("Failed to load public key: {}", e)))?;
     
     // Create the challenge using the construction from ironshield-types.
