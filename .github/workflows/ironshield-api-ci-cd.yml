@@ -28,7 +28,7 @@ jobs:
       checks: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: |
@@ -67,7 +67,7 @@ jobs:
     name: doc
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: |
@@ -108,7 +108,7 @@ jobs:
         os: [macos-latest, ubuntu-latest]
 #        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       # Install system dependencies based on OS.
       - name: Install system dependencies (Ubuntu)
@@ -176,7 +176,7 @@ jobs:
     steps:
       # Checkout the repository.
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -246,7 +246,7 @@ jobs:
     steps:
       # Checkout the repository at the new version.
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: main
 
@@ -299,7 +299,7 @@ jobs:
     steps:
       # Checkout the repository at the new version.
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: main
 
